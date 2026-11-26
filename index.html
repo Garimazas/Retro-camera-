@@ -59,6 +59,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 #btnShutter[disabled]{opacity:.5}
 #btnFlip{width:54px;height:54px;border-radius:50%;background:#1a1826;display:grid;place-items:center}
 #btnFlip svg{width:26px;height:26px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#app.editing #zoomRow,#app.editing #btnFlip,#app.editing #modes,#app.editing #btnLight{visibility:hidden}
+#btnShutter.save span{background:var(--acc2)}
 @media (orientation:landscape){
  #app{flex-direction:row}
  #panel{width:170px;display:flex;flex-direction:column;justify-content:center;padding:6px 0}
@@ -109,7 +111,11 @@ input[type=range]{width:150px;accent-color:var(--acc)}
     <div id="flashfx"></div>
     <div id="focus"></div>
     <div class="bar" id="topbar">
-      <button class="ic" id="btnLight" aria-label="Flash"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></button>
+      <div style="display:flex;gap:8px;pointer-events:none">
+        <button class="ic" id="btnLight" aria-label="Flash"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></button>
+        <button class="ic" id="btnImport" aria-label="Editar foto existente"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="1.6"/><path d="m21 15-5-5L5 21"/></svg></button>
+      </div>
+      <button class="pill" id="btnExitEdit" hidden>✕ SALIR DE EDICIÓN</button>
       <div id="recTimer" hidden><i></i><span>00:00</span></div>
       <button class="ic" id="btnSettings" aria-label="Ajustes"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
     </div>
@@ -148,6 +154,7 @@ input[type=range]{width:150px;accent-color:var(--acc)}
   <div id="vBody"></div>
 </div>
 
+<input type="file" id="fileIn" accept="image/*" hidden>
 <div id="splash">
   <h1>RETROCAM</h1>
   <p id="splashMsg">Fotos Y2K y vídeo VHS. Necesita permiso de cámara (y micrófono al grabar).</p>
@@ -184,6 +191,16 @@ const PHOTO = [
   fx:{sat:1.4,con:1.25,pixel:3,post:7,block:0.6,soft:0.4,tint:[1.0,1.03,0.95],noise:0.04}},
  {id:'bw',   name:'NOIR 90s',   tag:'B/N',  sw:'linear-gradient(135deg,#f2f2f2,#222)', ref:1400, stamp:null,
   fx:{sat:0,con:1.3,tint:[1.02,1.0,0.94],bloom:0.25,bloomR:4,soft:0.4,vig:0.45,noise:0.12}},
+ {id:'polaroid',name:'POLAROID',  tag:'INST', sw:'linear-gradient(135deg,#f7e7ce,#d98c6a)', ref:1200, stamp:null,
+  fx:{sat:0.9,con:0.9,bri:0.04,tint:[1.06,1.0,0.9],shadow:[0.10,0.07,0.04],soft:0.9,bloom:0.25,bloomR:5,vig:0.35,leak:0.45,noise:0.06,cnoise:0.02}},
+ {id:'webcam',name:'WEBCAM 2000', tag:'0.1MP',sw:'linear-gradient(135deg,#a3c9a8,#3d5a80)', ref:640, stamp:'white',
+  fx:{sat:0.85,con:1.1,pixel:2,post:20,block:0.9,soft:0.8,tint:[0.92,1.04,1.0],noise:0.07,cnoise:0.05,vig:0.2}},
+ {id:'lomo',  name:'LOMO',       tag:'XPRO', sw:'linear-gradient(135deg,#ff5e8a,#2dd36f)', ref:1400, stamp:null,
+  fx:{sat:1.5,con:1.35,tint:[1.06,1.04,0.9],shadow:[0.0,0.05,0.08],vig:0.75,noise:0.09,cnoise:0.04,ca:1.2,soft:0.4}},
+ {id:'cyber', name:'CYBER BLUE', tag:'Y2K',  sw:'linear-gradient(135deg,#c5d5ff,#1a1f6b)', ref:1200, stamp:null,
+  fx:{sat:0.6,con:1.3,tint:[0.82,0.95,1.2],shadow:[0.0,0.03,0.12],bloom:0.7,bloomR:7,soft:0.8,ca:1.0,vig:0.3,noise:0.03}},
+ {id:'sunset',name:'ATARDECER',  tag:'GOLD', sw:'linear-gradient(135deg,#ffcf6b,#ff5e7e)', ref:1200, stamp:'orange',
+  fx:{sat:1.3,con:1.1,bri:0.03,tint:[1.14,0.98,0.8],shadow:[0.08,0.02,0.05],bloom:0.5,bloomR:7,soft:0.8,vig:0.35,leak:0.4,noise:0.05}},
 ];
 
 const VIDEO = [
@@ -206,6 +223,14 @@ const VIDEO = [
   fx:{sat:0,con:1.2,tint:[0.95,1.0,0.97],noise:0.15,scan:0.5,lblur:1.0,track:0.4,wobble:0.3,vig:0.35,post:24},
   audio:null},
 ];
+
+// Los filtros de vídeo, aplicados también a foto (mismo efecto y mismo OSD)
+(function(){
+  const fromVideo = (id, name, tag, ref) => { const v = VIDEO.find(x => x.id === id);
+    return { id: 'v_' + id, name, tag, sw: v.sw, ref, stamp: null, osd: v.osd, fx: v.fx }; };
+  PHOTO.splice(1, 0, fromVideo('vhs', 'VHS FOTO', 'VHS', 540), fromVideo('worn', 'CINTA GASTADA', 'TAPE', 480));
+  PHOTO.push(fromVideo('night', 'NIGHTSHOT', 'IR', 540), fromVideo('dv', 'MINI DV', 'DV', 720));
+})();
 
 /* ====================== shaders ====================== */
 const VS = `#version 300 es
@@ -608,14 +633,16 @@ function drawVideoOSD(ctx, w, h, kind, st){
 // devuelve ovlMode: 0 ninguno, 1 antes de degradar (vídeo), 2 después (foto)
 function updateOverlay(W, H, preset){
   let kind = null, mode = 0;
-  if(S.mode === 'video'){ kind = S.set.stamp ? preset.osd : null; mode = 1; }
+  const vOsd = S.mode === 'video' || !!preset.osd;
+  if(vOsd){ kind = S.set.stamp ? preset.osd : null; mode = 1; }
   else { kind = S.set.stamp ? preset.stamp : null; mode = 2; }
   if(!kind) return 0;
-  const now = new Date(), blink = Math.floor(performance.now() / 500) % 2 === 0, el = S.recording ? Math.floor((performance.now() - S.rec.t0) / 1000) : 0;
-  const key = S.mode === 'video' ? [kind, W, H, S.recording, blink, now.getSeconds(), el].join('|') : [kind, W, H, now.getMinutes()].join('|');
+  const now = S.edit ? S.edit.date : new Date(), blink = S.mode === 'video' ? Math.floor(performance.now() / 500) % 2 === 0 : true, el = S.recording ? Math.floor((performance.now() - S.rec.t0) / 1000) : now.getMinutes() * 60 + now.getSeconds();
+  const rec = S.mode === 'video' ? S.recording : true;
+  const key = vOsd ? [kind, W, H, rec, blink, now.getSeconds(), el].join('|') : [kind, W, H, now.getMinutes()].join('|');
   if(key !== osdKey){
     osdKey = key; if(ov.width !== W || ov.height !== H){ ov.width = W; ov.height = H; }
-    if(S.mode === 'video') drawVideoOSD(octx, W, H, kind, { rec: S.recording, blink, date: now, el }); else drawPhotoStamp(octx, W, H, kind, now);
+    if(vOsd) drawVideoOSD(octx, W, H, kind, { rec, blink, date: now, el }); else drawPhotoStamp(octx, W, H, kind, now);
     R.setOverlay(ov);
   }
   return mode;
@@ -629,18 +656,20 @@ const cropFor = (sw, sh, asp, dz = 1) => {
 };
 let lastTick = 0, tc = null, tctx = null;
 function renderPreview(){
-  const vw = video.videoWidth, vh = video.videoHeight; if(!vw || !vh) return;
+  const E = S.edit;
+  const vw = E ? E.bmp.width : video.videoWidth, vh = E ? E.bmp.height : video.videoHeight; if(!vw || !vh) return;
   lastTick = performance.now();
   const preset = curPreset();
-  const asp = S.recording ? S.rec.aspect : viewAspect(); lastAspect = asp;
+  const asp = E ? E.asp : (S.recording ? S.rec.aspect : viewAspect()); lastAspect = asp;
   let W, H;
   if(S.recording){ [W, H] = S.rec.size; }
   else { const sShort = S.mode === 'video' ? preset.vres : Math.min(preset.ref, 900); const r = refFor(sShort, asp); W = even(r[0]); H = even(r[1]); }
-  R.size(W, H); R.setVideo(video, vw, vh);
+  R.size(W, H);
+  if(E){ if(!E.up){ R.setVideo(E.bmp, vw, vh); E.up = true; } } else R.setVideo(video, vw, vh);
   const ovlMode = updateOverlay(W, H, preset);
   const ref = S.mode === 'video' ? [W, H] : refFor(preset.ref, asp);
-  lastCrop = cropFor(vw, vh, asp, S.dzoom);
-  R.draw({ ref, crop: lastCrop, mirror: S.front, time: (performance.now() / 1000) % 1000, seed: S.seed, ovlMode, fx: preset.fx });
+  lastCrop = cropFor(vw, vh, asp, E ? 1 : S.dzoom);
+  R.draw({ ref, crop: lastCrop, mirror: E ? false : S.front, time: (performance.now() / 1000) % 1000, seed: S.seed, ovlMode, fx: preset.fx });
   if(S.recording && !S.rec.thumb && performance.now() - S.rec.t0 > 600){
     tc = tc || document.createElement('canvas'); tc.width = 150; tc.height = Math.round(150 / asp); tctx = tc.getContext('2d');
     tctx.drawImage(view, 0, 0, tc.width, tc.height); S.rec.thumb = tc.toDataURL('image/jpeg', 0.7);
@@ -714,12 +743,13 @@ async function takePhoto(){
   }catch(e){ console.error(e); toast('Error: ' + (e.message || e), 4000); }
   S.busy = false; $('#btnShutter').disabled = false;
 }
-async function exportPhoto(bmp, preset, asp){
+async function exportPhoto(bmp, preset, asp, o){
+  o = o || { mirror: S.front, dz: S.dzoom, date: null };
   if(!R2){ R2 = makeRenderer(document.createElement('canvas'), true); }
   let cw = bmp.width, ch = bmp.height;
   if(cw / ch > asp) cw = Math.round(ch * asp); else ch = Math.round(cw / asp);
-  const cropSrc = cropFor(bmp.width, bmp.height, asp, S.dzoom);
-  let tw = Math.round(cw / S.dzoom), th = Math.round(ch / S.dzoom);
+  const cropSrc = cropFor(bmp.width, bmp.height, asp, o.dz);
+  let tw = Math.round(cw / o.dz), th = Math.round(ch / o.dz);
   if(!S.set.hq){ const k = Math.min(1, preset.ref / Math.min(tw, th)); tw = Math.round(tw * k); th = Math.round(th * k); }
   const cap = Math.min(R2.maxTex, preset.id === 'raw' ? 8192 : 5120);
   const k2 = Math.min(1, cap / Math.max(tw, th)); tw = even(tw * k2); th = even(th * k2);
@@ -731,8 +761,9 @@ async function exportPhoto(bmp, preset, asp){
       R2.size(tw, th); R2.setVideo(src, src.width, src.height);
       // overlay a la resolución final
       const oc = document.createElement('canvas'); oc.width = tw; oc.height = th; let ovlMode = 0;
-      if(S.set.stamp && preset.stamp){ drawPhotoStamp(oc.getContext('2d'), tw, th, preset.stamp, new Date()); R2.setOverlay(oc); ovlMode = 2; }
-      R2.draw({ ref: refFor(preset.ref, asp), crop: cropSrc, mirror: S.front, time: 7.3, seed: Math.random(), ovlMode, fx: preset.fx });
+      if(S.set.stamp && preset.osd){ const nd = o.date || new Date(); drawVideoOSD(oc.getContext('2d'), tw, th, preset.osd, { rec: true, blink: true, date: nd, el: nd.getMinutes() * 60 + nd.getSeconds() }); R2.setOverlay(oc); ovlMode = 1; }
+      else if(S.set.stamp && preset.stamp){ drawPhotoStamp(oc.getContext('2d'), tw, th, preset.stamp, o.date || new Date()); R2.setOverlay(oc); ovlMode = 2; }
+      R2.draw({ ref: refFor(preset.ref, asp), crop: cropSrc, mirror: o.mirror, time: Math.random() * 900, seed: Math.random(), ovlMode, fx: preset.fx });
       R2.gl.finish();
       const thumbC = document.createElement('canvas'); thumbC.width = 150; thumbC.height = Math.round(150 * th / tw); thumbC.getContext('2d').drawImage(R2.canvas, 0, 0, thumbC.width, thumbC.height);
       const blob = await new Promise(r => R2.canvas.toBlob(r, 'image/jpeg', 0.93));
@@ -743,6 +774,23 @@ async function exportPhoto(bmp, preset, asp){
       if(++attempt > 2) throw e; tw = even(tw * 0.7); th = even(th * 0.7);
     }
   }
+}
+
+/* ====================== editar fotos ya hechas ====================== */
+function exitEdit(){
+  if(S.edit){ try{ S.edit.bmp.close(); }catch{} S.edit = null; }
+  $('#app').classList.remove('editing'); $('#btnExitEdit').hidden = true; $('#btnShutter').classList.remove('save'); osdKey = '';
+}
+async function saveEdit(){
+  if(S.busy || !S.edit) return; S.busy = true; $('#btnShutter').disabled = true;
+  try{
+    toast('REVELANDO…', 0); const e = S.edit, preset = PHOTO.find(p => p.id === S.fp);
+    const out = await exportPhoto(e.bmp, preset, e.asp, { mirror: false, dz: 1, date: e.date });
+    await saveItem('photo', out.blob, stampName('jpg'), out.thumb, out.w, out.h);
+    beep(2000, 0.08); vib(25);
+    toast('GUARDADA · ' + out.w + '×' + out.h + (S.set.auto ? ' · descargada' : '') + ' · puedes probar otro filtro', 3200);
+  }catch(err){ console.error(err); toast('Error: ' + (err.message || err), 4000); }
+  S.busy = false; $('#btnShutter').disabled = false;
 }
 
 /* ====================== grabar vídeo ====================== */
@@ -831,8 +879,24 @@ let deferredInstall = null;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; $('#rowInstall').hidden = false; });
 
 /* ====================== eventos ====================== */
-$('#btnShutter').onclick = () => { if(S.mode === 'photo') takePhoto(); else (S.recording ? stopRecording() : startRecording()); };
+$('#btnShutter').onclick = () => { if(S.edit) saveEdit(); else if(S.mode === 'photo') takePhoto(); else (S.recording ? stopRecording() : startRecording()); };
 $('#btnFlip').onclick = flipCamera;
+$('#btnImport').onclick = () => { if(!S.recording) $('#fileIn').click(); };
+$('#btnExitEdit').onclick = exitEdit;
+$('#fileIn').onchange = async ev => {
+  const f = ev.target.files && ev.target.files[0]; ev.target.value = ''; if(!f || S.recording) return;
+  try{
+    toast('Cargando foto…', 0);
+    let bmp = await createImageBitmap(f);
+    const mx = R.maxTex;
+    if(Math.max(bmp.width, bmp.height) > mx){ const k = mx / Math.max(bmp.width, bmp.height);
+      const b2 = await createImageBitmap(bmp, { resizeWidth: Math.floor(bmp.width * k), resizeHeight: Math.floor(bmp.height * k) }); bmp.close(); bmp = b2; }
+    if(S.edit){ try{ S.edit.bmp.close(); }catch{} }
+    S.edit = { bmp, asp: bmp.width / bmp.height, date: new Date(f.lastModified || Date.now()), up: false };
+    setMode('photo'); $('#app').classList.add('editing'); $('#btnExitEdit').hidden = false; $('#btnShutter').classList.add('save'); osdKey = '';
+    toast('Elige un filtro y pulsa el botón para guardar', 3500);
+  }catch(err){ console.error(err); toast('No he podido abrir esa imagen', 3000); }
+};
 $('#btnLight').onclick = () => { S.light = !S.light; if(S.mode === 'video') applyTorch(S.light); updateLightBtn(); toast(S.mode === 'photo' ? (S.light ? 'FLASH ACTIVADO' : 'FLASH APAGADO') : (S.light ? 'LINTERNA' : 'LINTERNA APAGADA'), 1000); };
 document.querySelectorAll('#modes button').forEach(b => b.onclick = () => setMode(b.dataset.m));
 $('#btnSettings').onclick = () => { $('#sheetBack').hidden = false; };
